@@ -10,72 +10,104 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
-   useEffect(() => {
-    const checkLoginStatus = async () => {
+  // Sprawdź, czy użytkownik jest zalogowany + pobierz notatki
+  useEffect(() => {
+    const checkLoginAndFetchNotes = async () => {
       try {
         const res = await fetch("http://localhost:3000/me", {
-          credentials: "include", // 👈 ważne!
+          credentials: "include",
         });
-
         if (res.ok) {
-          const data = await res.json();
-          console.log("✅ Użytkownik zalogowany:", data.user);
           setIsLoggedIn(true);
+
+          // Pobierz notatki
+          const notesRes = await fetch("http://localhost:3000/notes", {
+            credentials: "include",
+          });
+          if (notesRes.ok) {
+            const data = await notesRes.json();
+            setNotes(data);
+          }
         } else {
-          console.log("⛔ Użytkownik NIEzalogowany");
           setIsLoggedIn(false);
+          setNotes([]);
         }
       } catch (err) {
-        console.error("❌ Błąd przy sprawdzaniu sesji:", err);
+        console.error(err);
         setIsLoggedIn(false);
+        setNotes([]);
       } finally {
         setLoading(false);
       }
     };
 
-    checkLoginStatus();
+    checkLoginAndFetchNotes();
 
-    window.addEventListener("focus", checkLoginStatus);
-    return () => {
-    window.removeEventListener("focus", checkLoginStatus);
-  };
-
+    window.addEventListener("focus", checkLoginAndFetchNotes);
+    return () => window.removeEventListener("focus", checkLoginAndFetchNotes);
   }, []);
 
-  function addNote(newNote) {
-    setNotes(prevNotes => {
-      return [...prevNotes, newNote];
-    });
+  // Dodaj notatkę w backend i lokalnie
+  async function addNote(newNote) {
+    try {
+      const res = await fetch("http://localhost:3000/notes", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newNote),
+      });
+
+      if (res.ok) {
+        const savedNote = await res.json();
+        setNotes((prevNotes) => [...prevNotes, savedNote]);
+      } else {
+        alert("Failed to save note");
+      }
+    } catch (err) {
+      console.error("Add note error:", err);
+    }
   }
 
-  function deleteNote(id) {
-    setNotes(prevNotes => {
-      return prevNotes.filter((noteItem, index) => {
-        return index !== id;
+  // Usuń notatkę w backend i lokalnie
+  async function deleteNote(id) {
+    try {
+      const res = await fetch(`http://localhost:3000/notes/${id}`, {
+        method: "DELETE",
+        credentials: "include",
       });
-    });
+
+      if (res.ok) {
+        setNotes((prevNotes) => prevNotes.filter((note) => note.id !== id));
+      } else {
+        alert("Failed to delete note");
+      }
+    } catch (err) {
+      console.error("Delete note error:", err);
+    }
   }
 
   function handleLogin() {
     setIsLoggedIn(true);
   }
 
-function handleLogout() {
-  fetch("http://localhost:3000/logout", {
-    method: "POST",
-    credentials: "include",
-  })
-    .then((res) => {
+  async function handleLogout() {
+    try {
+      const res = await fetch("http://localhost:3000/logout", {
+        method: "POST",
+        credentials: "include",
+      });
       if (res.ok) {
         setIsLoggedIn(false);
+        setNotes([]);
       } else {
         alert("Logout failed");
       }
-    })
-    .catch((err) => {
+    } catch (err) {
       console.error("Logout error:", err);
-    });
-}
+    }
+  }
 
   if (loading) return <p>Loading...</p>;
 
@@ -85,19 +117,18 @@ function handleLogout() {
 
   return (
     <div>
-      <Header onLogout={handleLogout}  />
+      <Header onLogout={handleLogout} />
       <CreateArea onAdd={addNote} />
-      {notes.map((noteItem, index) => {
-        return (
-          <Note
-            key={index}
-            id={index}
-            title={noteItem.title}
-            content={noteItem.content}
-            onDelete={deleteNote}
-          />
-        );
-      })}
+      {notes.length === 0 && <p>Brak notatek do wyświetlenia</p>}
+      {notes.map((note) => (
+        <Note
+          key={note.id}
+          id={note.id}
+          title={note.title}
+          content={note.content}
+          onDelete={deleteNote}
+        />
+      ))}
       <Footer />
     </div>
   );

@@ -70,6 +70,7 @@ passport.use(
   )
 );
 
+// Passport Google Strategy
 passport.use(
   "google",
   new GoogleStrategy({
@@ -113,6 +114,17 @@ passport.deserializeUser(async (id, done) => {
     done(err);
   }
 });
+
+// Middleware zabezpieczający endpointy
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.status(401).json({ message: "Unauthorized" });
+}
+
+// Routes
+// Google OAuth
 
 app.get(
   "/auth/google",
@@ -167,7 +179,7 @@ app.post("/login", (req, res, next) => {
   })(req, res, next);
 });
 
-// ✅ Sprawdzenie czy użytkownik zalogowany (do testów)
+// ✅ Sprawdzenie czy użytkownik zalogowany 
 app.get("/me", (req, res) => {
   if (req.isAuthenticated()) {
     res.json({ user: req.user });
@@ -176,7 +188,7 @@ app.get("/me", (req, res) => {
   }
 });
 
-
+// Logout
 app.post("/logout", (req, res) => {
   req.logout((err) => {
     if (err) {
@@ -196,6 +208,59 @@ app.post("/logout", (req, res) => {
   });
 });
 
+
+// --- NOTES Endpoints ---
+
+// Pobierz notatki użytkownika
+app.get("/notes", ensureAuthenticated, async (req, res) => {
+  try {
+    const result = await db.query(
+      "SELECT id, title, content FROM notes WHERE user_id = $1 AND deleted = FALSE ORDER BY created_at DESC",
+      [req.user.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error fetching notes:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Dodaj nową notatkę
+app.post("/notes", ensureAuthenticated, async (req, res) => {
+  const { title, content } = req.body;
+  try {
+    const result = await db.query(
+      "INSERT INTO notes (user_id, title, content) VALUES ($1, $2, $3) RETURNING id, title, content",
+      [req.user.id, title, content]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error("Error adding note:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Usuń notatkę (logiczne usunięcie)
+app.delete("/notes/:id", ensureAuthenticated, async (req, res) => {
+  const noteId = req.params.id;
+  try {
+    const result = await db.query(
+      "UPDATE notes SET deleted = TRUE WHERE id = $1 AND user_id = $2",
+      [noteId, req.user.id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Note not found or not authorized" });
+    }
+
+    res.status(200).json({ message: "Note deleted" });
+  } catch (err) {
+    console.error("Error deleting note:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Start serwera
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
 });
