@@ -37,7 +37,12 @@ function LoginForm({ onSwitch, onLogin }) {
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
       <h3>Welcome Back!</h3>
-      <button type="button" className="google">Log In with Google</button>
+      <button type="button" 
+      className="google"
+      onClick={() => {
+      window.location.href = "http://localhost:3000/auth/google";
+    }}
+      >Log In with Google</button>
       <p>- or -</p>
 
       <input

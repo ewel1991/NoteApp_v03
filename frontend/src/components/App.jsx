@@ -34,6 +34,12 @@ function App() {
     };
 
     checkLoginStatus();
+
+    window.addEventListener("focus", checkLoginStatus);
+    return () => {
+    window.removeEventListener("focus", checkLoginStatus);
+  };
+
   }, []);
 
   function addNote(newNote) {
