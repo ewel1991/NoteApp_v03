@@ -34,7 +34,13 @@ db.query('SELECT NOW()').then(() => {
 
 
 // 🔧 Middleware
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+
+app.use(cors({ 
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://yourdomain.com' 
+    : 'http://localhost:5173',
+  credentials: true 
+}));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.set("trust proxy", 1);
