@@ -7,7 +7,7 @@ function Header({ onLogout }) {
     <header className="header">
       <h1 className="header-title">
         <HighlightIcon />
-        Note App
+        My Diary
       </h1>
       <button className="logout-button"  onClick={onLogout}>
        <ExitToAppIcon className="logout-icon" />
