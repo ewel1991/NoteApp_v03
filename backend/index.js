@@ -245,14 +245,19 @@ app.post("/logout", (req, res) => {
 // Pobierz notatki użytkownika
 app.get("/notes", ensureAuthenticated, async (req, res) => {
   try {
+    // Dodatkowa walidacja user_id
+    if (!req.user?.id || isNaN(parseInt(req.user.id))) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
+
     const result = await db.query(
       "SELECT id, title, content FROM notes WHERE user_id = $1 AND deleted = FALSE ORDER BY created_at DESC",
-      [req.user.id]
+      [parseInt(req.user.id)]
     );
     res.json(result.rows);
   } catch (err) {
     console.error("Error fetching notes:", err);
-    res.status(500).json({ message: "Server error" });
+    res.status(500).json({ message: "Błąd pobierania notatek" });
   }
 });
 
