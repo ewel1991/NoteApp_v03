@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import AddIcon from "@mui/icons-material/Add";
-import { Fab } from "@mui/material";
-import { Zoom } from "@mui/material";
+import { Fab, Zoom, CircularProgress } from "@mui/material";
 
 function CreateArea(props) {
   const [isExpanded, setExpanded] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // Nowy stan
 
   const [note, setNote] = useState({
     title: "",
@@ -22,13 +22,28 @@ function CreateArea(props) {
     });
   }
 
-  function submitNote(event) {
-    props.onAdd(note);
-    setNote({
-      title: "",
-      content: "",
-    });
+ async function submitNote(event) {
     event.preventDefault();
+    
+    if (!note.content.trim()) {
+      alert("Treść notatki nie może być pusta");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      await props.onAdd(note);
+      setNote({
+        title: "",
+        content: "",
+      });
+      setExpanded(false); 
+    } catch (error) {
+      console.error("Error adding note:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   function expand() {
@@ -37,13 +52,14 @@ function CreateArea(props) {
 
   return (
     <div>
-      <form className="create-note">
+      <form className="create-note" onSubmit={submitNote}>
         {isExpanded && (
           <input
             name="title"
             onChange={handleChange}
             value={note.title}
             placeholder="Title"
+            disabled={isSubmitting}
           />
         )}
 
@@ -54,10 +70,11 @@ function CreateArea(props) {
           value={note.content}
           placeholder="Take a note..."
           rows={isExpanded ? 3 : 1}
+           disabled={isSubmitting}
         />
         <Zoom in={isExpanded}>
-          <Fab onClick={submitNote}>
-            <AddIcon />
+          <Fab type="submit" disabled={isSubmitting}>
+             {isSubmitting ? <CircularProgress size={24} /> : <AddIcon />}
           </Fab>
         </Zoom>
       </form>
