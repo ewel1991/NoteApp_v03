@@ -4,12 +4,14 @@ function RegisterForm({ onSwitch }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordCheck, setPasswordCheck] = useState("");
+  const [validationErrors, setValidationErrors] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setValidationErrors([]);
 
     if (password !== passwordCheck) {
-      alert("Hasła muszą być takie same!");
+      setValidationErrors(["Hasła muszą być takie same!"]);
       return;
     }
 
@@ -25,19 +27,21 @@ function RegisterForm({ onSwitch }) {
         }),
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        console.log(data);
+      const data = await res.json();
 
+      if (res.ok) {
         alert("Rejestracja udana! Zaloguj się.");
-        onSwitch(); // ⬅ przełącz na formularz logowania
+        onSwitch(); 
       } else {
-        const error = await res.json();
-        alert("Błąd rejestracji: " + error.message);
+        if (data.errors && Array.isArray(data.errors)) {
+          setValidationErrors(data.errors);
+        } else {
+          setValidationErrors([data.message || "Nieznany błąd rejestracji"]);
+        }
       }
     } catch (err) {
       console.error("Rejestracja – błąd:", err);
-      alert("Coś poszło nie tak. Spróbuj ponownie później.");
+      setValidationErrors(["Coś poszło nie tak. Spróbuj ponownie później."]);
     }
   };
 
@@ -45,6 +49,14 @@ function RegisterForm({ onSwitch }) {
     <form className="auth-form" onSubmit={handleSubmit}>
       <h3>Create Your Account</h3>
       <p>Just enter your email address and your password to join.</p>
+         
+      {validationErrors.length > 0 && (
+      <ul className="error-list" style={{ color: "red", paddingLeft: "1rem" }}>
+        {validationErrors.map((err, idx) => (
+          <li key={idx}>{err}</li>
+        ))}
+      </ul>
+        )}
       <input
         type="email"
         name="emailReg"

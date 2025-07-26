@@ -8,6 +8,7 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import GoogleStrategy from "passport-google-oauth2";
 import env from "dotenv";
+import validator from 'validator';
 
 const app = express();
 const port = 3000;
@@ -22,6 +23,7 @@ const db = new pg.Client({
   port: process.env.PG_PORT,
 });
 db.connect();
+
 
 // 🔧 Middleware
 app.use(cors({ origin: "http://localhost:5173", credentials: true }));
@@ -139,11 +141,40 @@ app.get(
   })
 );
 
+function validateRegisterData(email, password) {
+  const errors = [];
+  
+  if (!email || !validator.isEmail(email)) {
+    errors.push("Nieprawidłowy format email");
+  }
+  
+  if (!password || password.length < 8) {
+    errors.push("Hasło musi mieć minimum 8 znaków");
+  }
+  
+  if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    errors.push("Hasło musi zawierać małą literę, dużą literę i cyfrę");
+  }
+  
+  return errors;
+}
+
 
 // ✅ REGISTER
 app.post("/register", async (req, res) => {
   const email = req.body.emailReg;
   const password = req.body.passwordReg;
+
+  // Walidacja danych wejściowych
+  const validationErrors = validateRegisterData(email, password);
+  if (validationErrors.length > 0) {
+    return res.status(400).json({ 
+      message: "Błędy walidacji", 
+      errors: validationErrors 
+    });
+  }
+
+
 
   try {
     const checkResult = await db.query("SELECT * FROM users WHERE email = $1", [email]);
