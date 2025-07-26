@@ -49,6 +49,12 @@ function App() {
 
   // Dodaj notatkę w backend i lokalnie
   async function addNote(newNote) {
+
+     if (!newNote.title?.trim() || !newNote.content?.trim()) {
+    alert("Tytuł i treść notatki są wymagane");
+    return;
+  }
+
     try {
       const res = await fetch("http://localhost:3000/notes", {
         method: "POST",
@@ -56,17 +62,22 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newNote),
+        body: JSON.stringify({
+        title: newNote.title.trim(),
+        content: newNote.content.trim()
+        }),
       });
 
       if (res.ok) {
         const savedNote = await res.json();
         setNotes((prevNotes) => [...prevNotes, savedNote]);
       } else {
-        alert("Failed to save note");
+         const errorData = await res.json();
+      alert(`Błąd zapisu: ${errorData.message || 'Nieznany błąd'}`);
       }
     } catch (err) {
-      console.error("Add note error:", err);
+       console.error("Add note error:", err);
+    alert("Błąd połączenia z serwerem. Spróbuj ponownie.");
     }
   }
 
