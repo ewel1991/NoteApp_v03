@@ -10,8 +10,26 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loading, setLoading] = useState(true);
 
+async function fetchNotes() {
+    try {
+      const notesRes = await fetch("http://localhost:3000/notes", {
+        credentials: "include",
+      });
+      if (notesRes.ok) {
+        const data = await notesRes.json();
+        setNotes(data);
+      } else {
+        setNotes([]);
+      }
+    } catch (err) {
+      console.error(err);
+      setNotes([]);
+    }
+  }
+
+
   // Sprawdź, czy użytkownik jest zalogowany + pobierz notatki
-  useEffect(() => {
+ useEffect(() => {
     const checkLoginAndFetchNotes = async () => {
       try {
         const res = await fetch("http://localhost:3000/me", {
@@ -19,15 +37,7 @@ function App() {
         });
         if (res.ok) {
           setIsLoggedIn(true);
-
-          // Pobierz notatki
-          const notesRes = await fetch("http://localhost:3000/notes", {
-            credentials: "include",
-          });
-          if (notesRes.ok) {
-            const data = await notesRes.json();
-            setNotes(data);
-          }
+          await fetchNotes();
         } else {
           setIsLoggedIn(false);
           setNotes([]);
@@ -99,8 +109,9 @@ function App() {
     }
   }
 
-  function handleLogin() {
+  async function handleLogin() {
     setIsLoggedIn(true);
+    await fetchNotes();
   }
 
   async function handleLogout() {

@@ -15,14 +15,22 @@ const port = 3000;
 const saltRounds = 10;
 env.config();
 
-const db = new pg.Client({
+const db = new pg.Pool({
   user: process.env.PG_USER,
   host: process.env.PG_HOST,
   database: process.env.PG_DATABASE,
   password: process.env.PG_PASSWORD,
   port: process.env.PG_PORT,
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
-db.connect();
+
+db.query('SELECT NOW()').then(() => {
+  console.log("✅ DB connected.");
+}).catch(err => {
+  console.error("❌ DB connection error:", err);
+});
 
 
 // 🔧 Middleware
@@ -105,6 +113,7 @@ passport.use(
 
 // ✅ SERIALIZACJA
 passport.serializeUser((user, done) => {
+  console.log("serializeUser:", user);
   done(null, user.id);
 });
 
@@ -299,4 +308,11 @@ app.delete("/notes/:id", ensureAuthenticated, async (req, res) => {
 // Start serwera
 app.listen(port, () => {
   console.log(`✅ Server running on port ${port}`);
+});
+
+
+process.on('SIGTERM', async () => {
+  console.log('Closing database connections...');
+  await db.end();
+  process.exit(0);
 });
